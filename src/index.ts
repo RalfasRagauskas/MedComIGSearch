@@ -5,9 +5,20 @@ const client = new Client({
 });
 
 async function main() {
-  const response = await client.info();
+  const response = await client.search({
+    index: "medcom-crawler-test",
+    query: {
+      multi_match: {
+        query: "observation",
+        fields: ["title", "body"]
+      }
+    },
+    size: 5
+  });
 
-  console.log(response);
+for (const hit of response.hits.hits) {
+  console.log(hit._source);
+}
 }
 
 main();
