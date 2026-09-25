@@ -1,0 +1,21 @@
+output_sink: elasticsearch
+output_index: medcom-crawler-test
+
+elasticsearch:
+  host: http://host.docker.internal:9200
+
+max_crawl_depth: 8
+
+domains:
+  - url: https://medcomfhir.dk
+    seed_urls:
+      - https://medcomfhir.dk/ig/homecareobservation/1.2.2/
+
+    crawl_rules:
+      - policy: allow
+        type: begins
+        pattern: /ig/homecareobservation/
+
+      - policy: deny
+        type: regex
+        pattern: .*
