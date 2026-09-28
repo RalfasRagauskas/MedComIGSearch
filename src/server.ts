@@ -1,43 +1,29 @@
-import { Client } from "@elastic/elasticsearch"
+import { Meilisearch } from "meilisearch";
 import express from "express";
 
-const client = new Client({
-  node: "http://localhost:9200"
+const client = new Meilisearch({
+  host: "http://localhost:7700"
 });
 
 const app = express();
 
-app.get("/search",  async (req, res) => {
-  const query = req.query.q;
+app.get("/search", async (req, res) => {
+  const query = req.query.q as string;
 
-  const response = await client.search({
-    index: "medcom-crawler-test",
-    query: {
-        multi_match: {
-            query: query as string,
-            fields: ["title", "body"]
-        }
-    },
-    size: 5
-  });
+  const response = await client
+    .index("medcom-documents")
+    .search(query, {
+      limit: 5
+    });
 
   res.json(
-    response.hits.hits.map(hit =>{
-        const source = hit._source as {
-            title?: string;
-            url?: string;
-            body?: string;
-            headings?: string[];
-            url_path_dir3?: string;
-        };
-        return {
-            title: source.title,
-            url: source.url,
-            version: source.url_path_dir3,
-            snippet: source.body?.substring(0,200)
-        };
-    })
-);
+    response.hits.map((hit: any) => ({
+      title: hit.title,
+      url: hit.url,
+      version: hit.version,
+      snippet: hit.body?.substring(0, 200)
+    }))
+  );
 });
 
 app.listen(3000, () => {
