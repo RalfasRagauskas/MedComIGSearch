@@ -1,5 +1,6 @@
 import { Meilisearch } from "meilisearch";
 import express from "express";
+import cors from "cors";
 
 const client = new Meilisearch({
   host: "http://localhost:7700"
@@ -7,13 +8,15 @@ const client = new Meilisearch({
 
 const app = express();
 
+app.use(cors());
+
 app.get("/search", async (req, res) => {
   const query = req.query.q as string;
 
   const response = await client
     .index("medcom-documents")
     .search(query, {
-      limit: 5
+      limit: 50
     });
 
   res.json(
@@ -21,7 +24,9 @@ app.get("/search", async (req, res) => {
       title: hit.title,
       url: hit.url,
       version: hit.version,
-      snippet: hit.body?.substring(0, 200)
+      text: hit.body || "",
+      type: "pages",
+      path: ""
     }))
   );
 });
