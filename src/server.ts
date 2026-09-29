@@ -19,16 +19,16 @@ app.get("/search", async (req, res) => {
       limit: 50
     });
 
-  res.json(
-    response.hits.map((hit: any) => ({
-      title: hit.title,
-      url: hit.url,
-      version: hit.version,
-      text: hit.body || "",
-      type: "pages",
-      path: ""
-    }))
-  );
+ res.json(
+  response.hits.map((hit: any) => ({
+    title: hit.title,
+    url: hit.url,
+    version: hit.version,
+    type: hit.type || "pages",
+    path: hit.url,
+    text: hit.body?.substring(0, 300)
+  }))
+);
 });
 
 app.listen(3000, () => {
