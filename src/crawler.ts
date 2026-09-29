@@ -30,8 +30,9 @@ async function crawl(url: string) {
 
     const title = $("title").text().trim();
 
-    const body = $("body").text().replace(/\s+/g, " ").trim();
-
+   const content = $("#segment-content").text();
+    const body = content.replace(/\s+/g, " ").trim();
+    
     const versionMatch = url.match(/\/ig\/[^/]+\/([^/]+)\//);
     const version = versionMatch?.[1];
 
@@ -76,5 +77,4 @@ async function main() {
 
   console.log(`Crawl finished. Visited ${visited.size} pages.`);
 }
-
 main();
