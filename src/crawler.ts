@@ -32,6 +32,11 @@ async function crawl(url: string) {
 
    const content = $("#segment-content").text();
     const body = content.replace(/\s+/g, " ").trim();
+
+    const breadcrumb = $("nav a ")
+      .map((_, element) => $(element).text().trim())
+      .get()
+      .filter(Boolean);
     
     const versionMatch = url.match(/\/ig\/[^/]+\/([^/]+)\//);
     const version = versionMatch?.[1];
@@ -43,6 +48,7 @@ async function crawl(url: string) {
         url,
         body,
         version,
+        breadcrumb,
       },
     ]);
 
@@ -56,25 +62,31 @@ async function crawl(url: string) {
       if (!link) continue;
 
       const nextUrl = new URL(link, url).href;
-
+    
       if (
         nextUrl.startsWith(
           "https://medcomfhir.dk/ig/homecareobservation/1.2.2/"
         )
       ) {
-        await crawl(nextUrl);
+        queue.push(nextUrl);
       }
     }
   } catch (error) {
     console.error(`Failed: ${url}`, error);
   }
 }
-
+const queue: string[] = [startUrl];
 async function main() {
   console.log("Starting crawler...");
 
-  await crawl(startUrl);
+ while (queue.length > 0) {
+  const url = queue.shift();
 
-  console.log(`Crawl finished. Visited ${visited.size} pages.`);
+  if (!url) continue;
+
+  await crawl(url);
+}
+
+console.log(`Crawl finished. Visited ${visited.size} pages.`);
 }
 main();
