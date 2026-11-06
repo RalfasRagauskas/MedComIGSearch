@@ -10,17 +10,33 @@ const app = express();
 
 app.use(cors());
 
-function createSnippet(text: string, query: string) {
-  const lowerText = text.toLowerCase();
+function createSnippet(text: string, query: string, contentType: string) {
+  const cleanText = text.replace(/\s+/g, " ").trim();
+  const lowerText = cleanText.toLowerCase();
   const lowerQuery = query.toLowerCase();
+
   const index = lowerText.indexOf(lowerQuery);
+
   if (index === -1) {
-    return text?.substring(0, 300);
+    return cleanText.substring(
+      0,
+      contentType === "html" ? 200 : 100
+    );
   }
-  const start = Math.max(0, index - 50);
-  const end = Math.min(text.length, index + query.length + 50);
-  return (start > 0 ? "..." : "") + text.substring(start, end)
-   + (end < text.length ? "..." : "");
+
+  const context = contentType === "html" ? 75 : 40;
+
+  const start = Math.max(0, index - context);
+  const end = Math.min(
+    cleanText.length,
+    index + query.length + context
+  );
+
+  return (
+    (start > 0 ? "..." : "") +
+    cleanText.substring(start, end) +
+    (end < cleanText.length ? "..." : "")
+  );
 }
 
 app.get("/search", async (req, res) => {
@@ -39,7 +55,13 @@ app.get("/search", async (req, res) => {
     version: hit.version,
     type: hit.type || "pages",
     path: hit.url,
-    text: createSnippet(hit.body ?? "", query)
+    text: createSnippet(
+  hit.body ?? "",
+  query,
+  hit.contentType || "html"
+    ),
+    breadcrumb: hit.breadcrumb || [],
+    contentType: hit.contentType || "html"
   }))
 );
 });

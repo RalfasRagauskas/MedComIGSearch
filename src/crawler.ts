@@ -28,7 +28,7 @@ async function crawl(url: string) {
     const html = await response.text();
     const $ = cheerio.load(html);
 
-    const title = $("title").text().trim();
+   const title = $("title").text().trim();
 
    const content = $("#segment-content").text();
     const body = content.replace(/\s+/g, " ").trim();
@@ -41,6 +41,11 @@ async function crawl(url: string) {
     const versionMatch = url.match(/\/ig\/[^/]+\/([^/]+)\//);
     const version = versionMatch?.[1];
 
+    const contentType =
+    url.endsWith(".xml") ? "xml" : 
+    url.endsWith(".json") ? "json" : 
+    "html";
+
     await index.addDocuments([
       {
         id: Buffer.from(url).toString("base64"),
@@ -49,6 +54,7 @@ async function crawl(url: string) {
         body,
         version,
         breadcrumb,
+        contentType,
       },
     ]);
 
@@ -61,8 +67,10 @@ async function crawl(url: string) {
     for (const link of links) {
       if (!link) continue;
 
-      const nextUrl = new URL(link, url).href;
-    
+     const parsedUrl = new URL(link, url);
+parsedUrl.hash = "";
+
+const nextUrl = parsedUrl.href;
       if (
         nextUrl.startsWith(
           "https://medcomfhir.dk/ig/homecareobservation/1.2.2/"
@@ -76,17 +84,28 @@ async function crawl(url: string) {
   }
 }
 const queue: string[] = [startUrl];
+
 async function main() {
   console.log("Starting crawler...");
 
- while (queue.length > 0) {
-  const url = queue.shift();
+  const startTime = performance.now();
 
-  if (!url) continue;
+  while (queue.length > 0) {
+    const url = queue.shift();
 
-  await crawl(url);
+    if (!url) continue;
+
+    await crawl(url);
+  }
+
+  const endTime = performance.now();
+  const duration = (endTime - startTime) / 1000;
+
+  console.log("--------------------------------");
+  console.log("Crawl finished!");
+  console.log(`Visited pages: ${visited.size}`);
+  console.log(`Total crawl time: ${duration.toFixed(2)} seconds`);
+  console.log("--------------------------------");
 }
 
-console.log(`Crawl finished. Visited ${visited.size} pages.`);
-}
 main();
