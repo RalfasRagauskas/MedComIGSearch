@@ -39,8 +39,11 @@ async function crawl(url: string) {
 
     const title = $("title").text().trim();
 
-    const content = $("#segment-content").text();
-    const body = content.replace(/\s+/g, " ").trim();
+    const content = $("#segment-content").clone();
+
+    content.find("style, script, noscript").remove();
+
+    const body = content.text().replace(/\s+/g, " ").trim();
 
     const breadcrumb = $("nav a")
       .map((_, element) => $(element).text().trim())
