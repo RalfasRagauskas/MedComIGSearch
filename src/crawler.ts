@@ -41,6 +41,8 @@ async function crawl(url: string) {
 
     const content = $("#segment-content").clone();
 
+    // Removes CSS, JavaScript and noscript elements from the extracted content.
+    // This ensures that only relevant documentation text is indexed.
     content.find("style, script, noscript").remove();
 
     const body = content.text().replace(/\s+/g, " ").trim();
@@ -60,6 +62,8 @@ async function crawl(url: string) {
 
     await index.addDocuments([
       {
+        // Encodes the URL as Base64URL to create a safe, unique document ID.
+        // Base64URL avoids problematic characters in Meilisearch document IDs.
         id: Buffer.from(url).toString("base64url"),
         title,
         url,
@@ -82,6 +86,9 @@ async function crawl(url: string) {
       if (!link) continue;
 
       const parsedUrl = new URL(link, url);
+
+      // Removes URL fragments (#...) so that links to different sections
+      // of the same page are treated as one URL and are not crawled as duplicates.
       parsedUrl.hash = "";
 
       const nextUrl = parsedUrl.href;
