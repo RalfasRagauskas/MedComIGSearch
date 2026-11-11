@@ -12,26 +12,19 @@ const index = meili.index("medcom-documents");
 // the IG in the search index/API (used by the frontend to tell "this IG"
 // apart from "other IGs"), and "name" is the human-readable label shown
 // alongside results that belong to a different IG than the one being browsed.
-const homeCareScope = {
-  id: "homecareobservation",
-  name: "Home Care Observations",
-  baseUrl: "https://medcomfhir.dk/ig/homecareobservation/1.2.2/",
-};
+const MedComFHIRImplementationGuides = [
+  {
+    id: "MedComFHIRImplementationGuides",
+    name: "MedCom FHIR Implementation Guides",
+    baseUrl: "https://medcomfhir.dk/ig/index.html/",
+  }
+];
 
-const coreScope = {
-  id: "core",
-  name: "MedCom Core",
-  baseUrl: "https://medcomfhir.dk/ig/core/2.2.0/",
-};
-
-const scopes = [homeCareScope, coreScope];
-
-const crawlScopes = scopes.map((scope) => scope.baseUrl);
-const startUrls = [homeCareScope.baseUrl, `${coreScope.baseUrl}index.html`];
+const scopes = MedComFHIRImplementationGuides;
 
 const visited = new Set<string>();
 
-// Counters
+// Counters for tracking the crawler's progress and results
 let successfullyFetched = 0;
 let indexedDocuments = 0;
 let failedRequests = 0;
@@ -117,9 +110,9 @@ async function crawl(url: string) {
 
       const nextUrl = parsedUrl.href;
 
-      if (crawlScopes.some((scope) => nextUrl.startsWith(scope))) {
+      if (scopes.some((scope) => nextUrl.startsWith(scope.baseUrl))) {
         queue.push(nextUrl);
-      }
+      } 
     }
   } catch (error) {
     failedRequests++;
@@ -127,7 +120,7 @@ async function crawl(url: string) {
   }
 }
 
-const queue: string[] = [...startUrls];
+const queue: string[] = scopes.map((scope) => scope.baseUrl);
 
 async function main() {
   console.log("Starting crawler...");
@@ -156,6 +149,7 @@ async function main() {
   console.log(`Successfully fetched: ${successfullyFetched}`);
   console.log(`Indexed documents: ${indexedDocuments}`);
   console.log(`Failed requests: ${failedRequests}`);
+  console.log(`Total requests: ${visited.size}`);
   console.log(`Total crawl time: ${duration.toFixed(2)} seconds`);
   console.log("--------------------------------");
 }
