@@ -41,15 +41,33 @@ function createSnippet(text: string, query: string, contentType: string) {
 
 app.get("/search", async (req, res) => {
   const query = req.query.q as string;
+  const currentIg = req.query.ig as string | undefined;
 
-  const response = await client
-    .index("medcom-documents")
-    .search(query, {
-      limit: 50
-    });
+  const documentIndex = client.index("medcom-documents");
+
+  // Without a known "current IG", a single global search is the best we can
+  // do. With one, two separate queries are run so results from the other IG
+  // (which may simply have more/better-matching content) can't crowd the
+  // current IG's results out of a shared top-50 cut.
+  const searches = currentIg
+    ? [
+        documentIndex.search(query, {
+          limit: 50,
+          filter: `ig = ${JSON.stringify(currentIg)}`
+        }),
+        documentIndex.search(query, {
+          limit: 50,
+          filter: `ig != ${JSON.stringify(currentIg)}`
+        })
+      ]
+    : [documentIndex.search(query, { limit: 50 })];
+
+  const responses = await Promise.all(searches);
+
+  const hits = responses.flatMap((response) => response.hits);
 
  res.json(
-  response.hits.map((hit: any) => ({
+  hits.map((hit: any) => ({
     title: hit.title,
     url: hit.url,
     version: hit.version,
@@ -61,7 +79,9 @@ app.get("/search", async (req, res) => {
   hit.contentType || "html"
     ),
     breadcrumb: hit.breadcrumb || [],
-    contentType: hit.contentType || "html"
+    contentType: hit.contentType || "html",
+    ig: hit.ig,
+    igName: hit.igName
   }))
 );
 });

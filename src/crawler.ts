@@ -8,8 +8,26 @@ const meili = new Meilisearch({
 
 const index = meili.index("medcom-documents");
 
-const startUrl =
-  "https://medcomfhir.dk/ig/homecareobservation/1.2.2/";
+// Each scope describes one IG that is crawled and indexed. "id" identifies
+// the IG in the search index/API (used by the frontend to tell "this IG"
+// apart from "other IGs"), and "name" is the human-readable label shown
+// alongside results that belong to a different IG than the one being browsed.
+const homeCareScope = {
+  id: "homecareobservation",
+  name: "Home Care Observations",
+  baseUrl: "https://medcomfhir.dk/ig/homecareobservation/1.2.2/",
+};
+
+const coreScope = {
+  id: "core",
+  name: "MedCom Core",
+  baseUrl: "https://medcomfhir.dk/ig/core/2.2.0/",
+};
+
+const scopes = [homeCareScope, coreScope];
+
+const crawlScopes = scopes.map((scope) => scope.baseUrl);
+const startUrls = [homeCareScope.baseUrl, `${coreScope.baseUrl}index.html`];
 
 const visited = new Set<string>();
 
@@ -55,6 +73,10 @@ async function crawl(url: string) {
     const versionMatch = url.match(/\/ig\/[^/]+\/([^/]+)\//);
     const version = versionMatch?.[1];
 
+    // Identifies which IG this page belongs to, so the frontend can tell
+    // results from the IG being browsed apart from results from other IGs.
+    const scope = scopes.find((scope) => url.startsWith(scope.baseUrl));
+
     const contentType =
       url.endsWith(".xml") ? "xml" :
       url.endsWith(".json") ? "json" :
@@ -71,6 +93,8 @@ async function crawl(url: string) {
         version,
         breadcrumb,
         contentType,
+        ig: scope?.id,
+        igName: scope?.name,
       },
     ]);
 
@@ -93,11 +117,7 @@ async function crawl(url: string) {
 
       const nextUrl = parsedUrl.href;
 
-      if (
-        nextUrl.startsWith(
-          "https://medcomfhir.dk/ig/homecareobservation/1.2.2/"
-        )
-      ) {
+      if (crawlScopes.some((scope) => nextUrl.startsWith(scope))) {
         queue.push(nextUrl);
       }
     }
@@ -107,10 +127,15 @@ async function crawl(url: string) {
   }
 }
 
-const queue: string[] = [startUrl];
+const queue: string[] = [...startUrls];
 
 async function main() {
   console.log("Starting crawler...");
+
+  // "ig" must be a filterable attribute so the search API can run a
+  // separate, fair query per IG instead of one global top-N search that lets
+  // whichever IG ranks higher for a given term crowd out the other.
+  await index.updateFilterableAttributes(["ig"]);
 
   const startTime = performance.now();
 
