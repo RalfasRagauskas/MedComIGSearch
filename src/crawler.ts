@@ -16,7 +16,7 @@ const MedComFHIRImplementationGuides = [
   {
     id: "MedComFHIRImplementationGuides",
     name: "MedCom FHIR Implementation Guides",
-    baseUrl: "https://medcomfhir.dk/ig/index.html/",
+    baseUrl: "https://medcomfhir.dk/ig/",
   }
 ];
 
