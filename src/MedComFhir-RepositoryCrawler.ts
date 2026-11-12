@@ -22,3 +22,11 @@ fs.mkdirSync(tempDir);
 const relevantFolder = [
     "ig"
 ]
+
+// Clone repository into temporary directory
+execFileSync("git", ["clone", "--depth", "1", repositoryUrl, tempDir], {
+    stdio: "inherit",
+});
+
+// Path to relevant documentation
+const igPath = path.join(tempDir, ...relevantFolder);
