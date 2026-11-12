@@ -5,6 +5,7 @@ import os from "os";
 import crypto from "crypto";
 import { execFileSync } from "child_process";
 import { Meilisearch } from "meilisearch";
+import * as cheerio from "cheerio";
 
 // Meilisearch localhost connection for temporary use
 const meili = new Meilisearch({
@@ -52,3 +53,28 @@ function findHtmlFiles(dir: string): string[] {
 
 const htmlFiles = findHtmlFiles(igPath);
 console.log("Found HTML files:", htmlFiles);
+
+const extract = (htmlFile: string) => {
+    const content = fs.readFileSync(htmlFile, "utf-8");
+    const $ = cheerio.load(content);
+    return {
+        title: $("title").text(),
+        body: $("body").text(),
+    };
+};
+
+// Extract content from all HTML files
+const documents = htmlFiles.map((file) => {
+    const { title, body } = extract(file);
+    return {
+        id: crypto.createHash("sha256").update(file).digest("hex"),
+        title,
+        body,
+        path: file,
+    };
+});
+
+// Index documents in Meilisearch
+index.addDocuments(documents).then((response) => {
+    console.log("Documents indexed:", response);
+});
