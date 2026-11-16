@@ -1,4 +1,3 @@
-
 import fs from "fs";
 import path from "path";
 import os from "os";
@@ -57,9 +56,12 @@ console.log("Found HTML files:", htmlFiles);
 const extract = (htmlFile: string) => {
     const content = fs.readFileSync(htmlFile, "utf-8");
     const $ = cheerio.load(content);
+
+    $("script, style, noscript, nav, footer, header").remove();
+
     return {
-        title: $("title").text(),
-        body: $("body").text(),
+        title: $("title").text().trim(),
+        body: $("body").text().replace(/\s+/g, " ").trim(),
     };
 };
 
@@ -67,14 +69,33 @@ const extract = (htmlFile: string) => {
 const documents = htmlFiles.map((file) => {
     const { title, body } = extract(file);
     return {
-        id: crypto.createHash("sha256").update(file).digest("hex"),
+        id: crypto.createHash("sha256")
+    .update(path.relative(igPath, file).replace(/\\/g, "/"))
+    .digest("hex"),
         title,
         body,
-        path: file,
+        path: path.relative(igPath, file).replace(/\\/g, "/")
     };
 });
 
 // Index documents in Meilisearch
-index.addDocuments(documents).then((response) => {
-    console.log("Documents indexed:", response);
-});
+
+// Index documents in Meilisearch
+async function indexDocuments() {
+    try {
+        const response = await index.addDocuments(documents);
+
+        console.log("Indexing task:", response.taskUid);
+
+        await meili.tasks.waitForTask(response.taskUid);
+
+        const stats = await index.getStats();
+
+        console.log("Indexing completed!");
+        console.log("Documents indexed:", stats.numberOfDocuments);
+    } catch (error) {
+        console.error("Indexing failed:", error);
+    }
+}
+
+indexDocuments();
