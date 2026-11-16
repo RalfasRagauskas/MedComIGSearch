@@ -43,7 +43,11 @@ app.get("/search", async (req, res) => {
   const query = req.query.q as string;
   const currentIg = req.query.ig as string | undefined;
 
-  const documentIndex = client.index("medcom-documents");
+  // the old index from the crawler.ts 
+  // const documentIndex = client.index("medcom-documents");
+
+ // The index for the MedCom FHIR documents from the repository crawler
+  const documentIndex = client.index("medcom-fhir-documents");
 
   // Without a known "current IG", a single global search is the best we can
   // do. With one, two separate queries are run so results from the other IG
