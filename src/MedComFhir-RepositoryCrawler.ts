@@ -83,16 +83,28 @@ const documents = htmlFiles.map((file) => {
 // Index documents in Meilisearch
 async function indexDocuments() {
     try {
-        const response = await index.addDocuments(documents);
 
-        console.log("Indexing task:", response.taskUid);
+        // changed batch size to 200 for indexing so it does not 
+        // overload the Meilisearch server with too many documents at once
+        const batchSize = 200;
 
-        await meili.tasks.waitForTask(response.taskUid);
+        for (let i = 0; i < documents.length; i += batchSize) {
+            const batch = documents.slice(i, i + batchSize);
+
+            console.log(
+                `Indexing documents ${i + 1} to ${i + batch.length} of ${documents.length}`
+            );
+
+            const response = await index.addDocuments(batch);
+
+            await meili.tasks.waitForTask(response.taskUid);
+        }
 
         const stats = await index.getStats();
 
         console.log("Indexing completed!");
         console.log("Documents indexed:", stats.numberOfDocuments);
+
     } catch (error) {
         console.error("Indexing failed:", error);
     }
