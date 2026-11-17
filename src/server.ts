@@ -76,7 +76,9 @@ const hits = response.hits;
       title: hit.title,
       url: hit.path,
       path: hit.path,
-      text: createSnippet(hit.body, query, "html")
+      text: createSnippet(hit.body, query, "html"),
+      ig: hit.ig,
+      version: hit.version
     }))
   );
 });
