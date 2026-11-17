@@ -20,10 +20,8 @@ const repositoryUrl =
 const tempDir = path.join(os.tmpdir(), crypto.randomUUID());
 fs.mkdirSync(tempDir);
 
-// the folders within the repository that are relevant for indexing
-const relevantFolder = [
-    "ig"
-]
+// Relevant folders within the repository
+const relevantFolder = ["ig"];
 
 // Clone repository into temporary directory
 execFileSync("git", ["clone", "--depth", "1", repositoryUrl, tempDir], {
@@ -38,9 +36,11 @@ const igPath = path.join(tempDir, ...relevantFolder);
 function findHtmlFiles(dir: string): string[] {
     let htmlFiles: string[] = [];
     const files = fs.readdirSync(dir);
+
     for (const file of files) {
         const fullPath = path.join(dir, file);
         const stat = fs.statSync(fullPath);
+
         if (stat.isDirectory()) {
             htmlFiles = htmlFiles.concat(findHtmlFiles(fullPath));
         } else if (stat.isFile() && file.endsWith(".html")) {
@@ -68,24 +68,60 @@ const extract = (htmlFile: string) => {
 // Extract content from all HTML files
 const documents = htmlFiles.map((file) => {
     const { title, body } = extract(file);
+
+    const relativePath = path.relative(igPath, file).replace(/\\/g, "/");
+    const pathParts = relativePath.split("/");
+
     return {
         id: crypto.createHash("sha256")
-    .update(path.relative(igPath, file).replace(/\\/g, "/"))
-    .digest("hex"),
+            .update(relativePath)
+            .digest("hex"),
+
         title,
         body,
-        path: path.relative(igPath, file).replace(/\\/g, "/")
+        path: relativePath,
+
+        ig: pathParts[0],
+        version: pathParts.length > 2 ? pathParts[1] : null,
     };
 });
 
-// Index documents in Meilisearch
+// Wait for Meilisearch task to finish
+async function waitForMeiliTask(taskUid: number) {
+    while (true) {
+        const response = await fetch(
+            `http://localhost:7700/tasks/${taskUid}`
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                `Task check failed: ${response.status}`
+            );
+        }
+
+        const task = await response.json();
+
+        if (task.status === "succeeded") {
+            return;
+        }
+
+        if (task.status === "failed" || task.status === "canceled") {
+            throw new Error(
+                `Task ${taskUid} ${task.status}: ${JSON.stringify(task.error)}`
+            );
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+}
 
 // Index documents in Meilisearch
 async function indexDocuments() {
     try {
+        // Make IG metadata filterable in Meilisearch
+        await index.updateFilterableAttributes(["ig", "version"]);
 
-        // changed batch size to 200 for indexing so it does not 
-        // overload the Meilisearch server with too many documents at once
+        // Batch size
         const batchSize = 200;
 
         for (let i = 0; i < documents.length; i += batchSize) {
@@ -97,7 +133,12 @@ async function indexDocuments() {
 
             const response = await index.addDocuments(batch);
 
-            await meili.tasks.waitForTask(response.taskUid);
+            // Wait for Meilisearch to finish indexing
+            await waitForMeiliTask(response.taskUid);
+
+            console.log(
+                `Successfully indexed ${i + batch.length} documents`
+            );
         }
 
         const stats = await index.getStats();

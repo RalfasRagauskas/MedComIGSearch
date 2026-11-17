@@ -10,8 +10,8 @@ const app = express();
 
 app.use(cors());
 
-function createSnippet(text: string, query: string, contentType: string) {
-  const cleanText = text.replace(/\s+/g, " ").trim();
+function createSnippet(text: string | undefined, query: string, contentType: string) {
+  const cleanText = (text ?? "").replace(/\s+/g, " ").trim();
   const lowerText = cleanText.toLowerCase();
   const lowerQuery = query.toLowerCase();
 
@@ -53,41 +53,22 @@ app.get("/search", async (req, res) => {
   // do. With one, two separate queries are run so results from the other IG
   // (which may simply have more/better-matching content) can't crowd the
   // current IG's results out of a shared top-50 cut.
-  const searches = currentIg
-    ? [
-        documentIndex.search(query, {
-          limit: 50,
-          filter: `ig = ${JSON.stringify(currentIg)}`
-        }),
-        documentIndex.search(query, {
-          limit: 50,
-          filter: `ig != ${JSON.stringify(currentIg)}`
-        })
-      ]
-    : [documentIndex.search(query, { limit: 50 })];
+  const searches = [
+  documentIndex.search(query, { limit: 50 })
+];
 
   const responses = await Promise.all(searches);
 
   const hits = responses.flatMap((response) => response.hits);
 
- res.json(
-  hits.map((hit: any) => ({
-    title: hit.title,
-    url: hit.url,
-    version: hit.version,
-    type: hit.type || "pages",
-    path: hit.url,
-    text: createSnippet(
-  hit.body ?? "",
-  query,
-  hit.contentType || "html"
-    ),
-    breadcrumb: hit.breadcrumb || [],
-    contentType: hit.contentType || "html",
-    ig: hit.ig,
-    igName: hit.igName
-  }))
-);
+  res.json(
+    hits.map((hit: any) => ({
+      title: hit.title,
+      url: hit.path,
+      path: hit.path,
+      text: createSnippet(hit.body, query, "html")
+    }))
+  );
 });
 
 app.listen(3000, () => {
