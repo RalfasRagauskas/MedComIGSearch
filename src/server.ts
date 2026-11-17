@@ -43,23 +43,33 @@ app.get("/search", async (req, res) => {
   const query = req.query.q as string;
   const currentIg = req.query.ig as string | undefined;
 
-  // the old index from the crawler.ts 
-  // const documentIndex = client.index("medcom-documents");
+const filters: string[] = [];
+if (currentIg) {
+  filters.push(`ig = "${currentIg}"`);
+}
+const version = req.query.version as string | undefined;
+if (version) {
+  filters.push(`version = "${version}"`);
+}
+const filterString = filters.join(" AND ");
 
  // The index for the MedCom FHIR documents from the repository crawler
   const documentIndex = client.index("medcom-fhir-documents");
 
-  // Without a known "current IG", a single global search is the best we can
-  // do. With one, two separate queries are run so results from the other IG
-  // (which may simply have more/better-matching content) can't crowd the
-  // current IG's results out of a shared top-50 cut.
-  const searches = [
-  documentIndex.search(query, { limit: 50 })
-];
+ 
 
-  const responses = await Promise.all(searches);
+ 
+const searchOptions: { limit: number; filter?: string } = {
+  limit: 50
+};
 
-  const hits = responses.flatMap((response) => response.hits);
+if (filterString) {
+  searchOptions.filter = filterString;
+}
+
+const response = await documentIndex.search(query, searchOptions);
+
+const hits = response.hits;
 
   res.json(
     hits.map((hit: any) => ({
