@@ -72,18 +72,24 @@ const documents = htmlFiles.map((file) => {
     const relativePath = path.relative(igPath, file).replace(/\\/g, "/");
     const pathParts = relativePath.split("/");
 
-    return {
-        id: crypto.createHash("sha256")
-            .update(relativePath)
-            .digest("hex"),
+    const ig = pathParts[0];
+const version = pathParts.length > 2 ? pathParts[1] : null;
+const fileName = pathParts[pathParts.length - 1];
+const url = `https://medcomfhir.dk/ig/${ig}/${fileName}`;
 
-        title,
-        body,
-        path: relativePath,
+return {
+    id: crypto.createHash("sha256")
+        .update(relativePath)
+        .digest("hex"),
 
-        ig: pathParts[0],
-        version: pathParts.length > 2 ? pathParts[1] : null,
-    };
+    title,
+    body,
+    path: relativePath,
+    url,
+
+    ig,
+    version,
+};
 });
 
 // Wait for Meilisearch task to finish

@@ -74,7 +74,7 @@ const hits = response.hits;
   res.json(
     hits.map((hit: any) => ({
       title: hit.title,
-      url: hit.path,
+      url: hit.url,
       path: hit.path,
       text: createSnippet(hit.body, query, "html"),
       ig: hit.ig,
