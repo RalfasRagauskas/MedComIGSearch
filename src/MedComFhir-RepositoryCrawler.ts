@@ -57,17 +57,22 @@ const extract = (htmlFile: string) => {
     const content = fs.readFileSync(htmlFile, "utf-8");
     const $ = cheerio.load(content);
 
-    $("script, style, noscript, nav, footer, header").remove();
+    const breadcrumb = $("#segment-breadcrumb .breadcrumb li")
+    .map((_, element) => $(element).text().trim())
+    .get();
+
+    $("script, style, noscript, nav, footer, header, #segment-breadcrumb").remove();
 
     return {
         title: $("title").text().trim(),
         body: $("body").text().replace(/\s+/g, " ").trim(),
+        breadcrumb,
     };
 };
 
 // Extract content from all HTML files
 const documents = htmlFiles.map((file) => {
-    const { title, body } = extract(file);
+    const { title, body, breadcrumb } = extract(file);
 
     const relativePath = path.relative(igPath, file).replace(/\\/g, "/");
     const pathParts = relativePath.split("/");
@@ -84,6 +89,7 @@ return {
 
     title,
     body,
+    breadcrumb,
     path: relativePath,
     url,
 

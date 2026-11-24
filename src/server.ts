@@ -77,6 +77,7 @@ const hits = response.hits;
       url: hit.url,
       path: hit.path,
       text: createSnippet(hit.body, query, "html"),
+      breadcrumb: hit.breadcrumb,
       ig: hit.ig,
       version: hit.version
     }))
