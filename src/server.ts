@@ -47,6 +47,12 @@ const filters: string[] = [];
 if (currentIg) {
   filters.push(`ig = "${currentIg}"`);
 }
+
+const type = req.query.type as string | undefined;
+if (type) {
+  filters.push(`type = "${type}"`);
+}
+
 const version = req.query.version as string | undefined;
 if (version) {
   filters.push(`version = "${version}"`);
@@ -79,7 +85,8 @@ const hits = response.hits;
       text: createSnippet(hit.body, query, "html"),
       breadcrumb: hit.breadcrumb,
       ig: hit.ig,
-      version: hit.version
+      version: hit.version,
+      type: hit.type
     }))
   );
 });

@@ -70,9 +70,45 @@ const extract = (htmlFile: string) => {
     };
 };
 
+
+function getDocumentType(
+    htmlFile: string,
+    breadcrumb: string[],
+    content: string
+): string | null {
+    const $ = cheerio.load(content);
+
+    const headings = $("h1, h2, h3, h4")
+        .map((_, element) => $(element).text().trim())
+        .get()
+        .join(" ");
+
+    if (/Resource Profile\s*:/i.test(headings)) {
+        return "profiles";
+    }
+
+    if (/\bExtension\s*:/i.test(headings)) {
+        return "extensions";
+    }
+
+    const fileName = path.basename(htmlFile);
+
+    if (
+        /example/i.test(fileName) ||
+        breadcrumb.some(item => /\bexamples?\b/i.test(item))
+    ) {
+        return "examples";
+    }
+
+    return null;
+}
+
 // Extract content from all HTML files
 const documents = htmlFiles.map((file) => {
     const { title, body, breadcrumb } = extract(file);
+
+    const content = fs.readFileSync(file, "utf-8");
+    const type = getDocumentType(file, breadcrumb, content);
 
     const relativePath = path.relative(igPath, file).replace(/\\/g, "/");
     const pathParts = relativePath.split("/");
@@ -81,6 +117,7 @@ const documents = htmlFiles.map((file) => {
 const version = pathParts.length > 2 ? pathParts[1] : null;
 const fileName = pathParts[pathParts.length - 1];
 const url = `https://medcomfhir.dk/ig/${ig}/${fileName}`;
+
 
 return {
     id: crypto.createHash("sha256")
@@ -95,6 +132,7 @@ return {
 
     ig,
     version,
+    type,
 };
 });
 
@@ -131,7 +169,7 @@ async function waitForMeiliTask(taskUid: number) {
 async function indexDocuments() {
     try {
         // Make IG metadata filterable in Meilisearch
-        await index.updateFilterableAttributes(["ig", "version"]);
+        await index.updateFilterableAttributes(["ig", "version", "type"]);
 
         // Batch size
         const batchSize = 200;
