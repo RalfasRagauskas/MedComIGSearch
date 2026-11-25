@@ -171,6 +171,13 @@ async function indexDocuments() {
         // Make IG metadata filterable in Meilisearch
         await index.updateFilterableAttributes(["ig", "version", "type"]);
 
+        await index.updateSearchableAttributes([
+            "title",
+            "body",
+            "breadcrumb",
+            "ig"
+        ])
+
         // Batch size
         const batchSize = 200;
 
