@@ -66,7 +66,7 @@ const filterString = filters.join(" AND ");
 
  
 const searchOptions: { limit: number; filter?: string } = {
-  limit: 50
+  limit: 250
 };
 
 if (filterString) {
